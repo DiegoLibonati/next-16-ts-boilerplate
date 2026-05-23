@@ -1,18 +1,29 @@
-import pino from "pino";
+import pino, { type Logger } from "pino";
 
 import { getEnvs } from "@/server/configs/env.config";
 
-const envs = getEnvs();
-const isDev = envs.ENV === "development";
+let _logger: Logger | null = null;
 
-export const logger = pino({
-  level: envs.LOG_LEVEL,
-  ...(isDev
-    ? {
-        transport: {
-          target: "pino-pretty",
-          options: { colorize: true, translateTime: "SYS:standard", ignore: "pid,hostname" },
-        },
-      }
-    : {}),
+function init(): Logger {
+  const envs = getEnvs();
+  const isDev = envs.ENV === "development";
+
+  return pino({
+    level: envs.LOG_LEVEL,
+    ...(isDev
+      ? {
+          transport: {
+            target: "pino-pretty",
+            options: { colorize: true, translateTime: "SYS:standard", ignore: "pid,hostname" },
+          },
+        }
+      : {}),
+  });
+}
+
+export const logger: Logger = new Proxy({} as Logger, {
+  get(_target, prop: string | symbol, receiver: unknown): unknown {
+    _logger ??= init();
+    return Reflect.get(_logger, prop, receiver);
+  },
 });
