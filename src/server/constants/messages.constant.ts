@@ -26,4 +26,5 @@ export const MESSAGES_ERROR: MessagesError = {
   invalidCredentials: "Invalid credentials.",
   requiredFields: "Email and password are required.",
   validation: "Validation failed.",
+  malformedBody: "Malformed JSON body.",
 };

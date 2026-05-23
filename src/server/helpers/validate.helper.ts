@@ -20,7 +20,7 @@ export const validateBody = async <T>(req: Request, schema: ZodType<T>): Promise
   try {
     raw = await req.json();
   } catch {
-    throw new BadRequestError(CODES_ERROR.validation, "Malformed JSON body");
+    throw new BadRequestError(CODES_ERROR.malformedBody, MESSAGES_ERROR.malformedBody);
   }
   const result = schema.safeParse(raw);
   if (!result.success) throw toBadRequest(result.error);

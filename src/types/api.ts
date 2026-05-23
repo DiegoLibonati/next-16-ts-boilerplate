@@ -73,6 +73,7 @@ export interface CodesError {
   invalidCredentials: "ERROR_INVALID_CREDENTIALS";
   requiredFields: "ERROR_REQUIRED_FIELDS";
   validation: "ERROR_VALIDATION";
+  malformedBody: "ERROR_MALFORMED_BODY";
 }
 
 export interface MessagesSuccess {
@@ -101,4 +102,5 @@ export interface MessagesError {
   invalidCredentials: string;
   requiredFields: string;
   validation: string;
+  malformedBody: string;
 }

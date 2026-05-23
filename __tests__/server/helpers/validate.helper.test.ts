@@ -7,6 +7,8 @@ import { z } from "zod";
 
 import { BadRequestError } from "@/server/errors/bad_request.error";
 
+import { MESSAGES_ERROR } from "@/server/constants/messages.constant";
+
 import { validateBody, validateParams, validateQuery } from "@/server/helpers/validate.helper";
 
 const buildJsonRequest = (body: unknown): NextRequest =>
@@ -64,7 +66,7 @@ describe("validate.helper", () => {
       it("should throw BadRequestError for malformed body", async () => {
         const req = buildBrokenJsonRequest();
 
-        await expect(validateBody(req, schema)).rejects.toThrow("Malformed JSON body");
+        await expect(validateBody(req, schema)).rejects.toThrow(MESSAGES_ERROR.malformedBody);
       });
     });
   });
