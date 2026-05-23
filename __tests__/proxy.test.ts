@@ -3,16 +3,15 @@
  */
 
 import { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
+
+import { Jwt } from "@/server/configs/jwt.config";
 
 import { proxy } from "@/proxy";
 
-jest.mock("jose", () => ({
-  jwtVerify: jest.fn(),
-}));
+const mockVerifyJWT = jest.fn();
 
 jest.mock("@/server/configs/jwt.config", () => ({
-  getJwtSecret: jest.fn(() => new Uint8Array([1, 2, 3])),
+  Jwt: jest.fn(),
 }));
 
 const buildRequest = (
@@ -34,6 +33,7 @@ const buildRequest = (
 
 beforeEach((): void => {
   jest.spyOn(console, "warn").mockImplementation((): void => undefined);
+  (Jwt as unknown as jest.Mock).mockImplementation(() => ({ verifyJWT: mockVerifyJWT }));
 });
 
 describe("proxy", () => {
@@ -61,7 +61,7 @@ describe("proxy", () => {
     });
 
     it("should allow GET to /api/ even when cross-origin (safe method)", async () => {
-      (jwtVerify as jest.Mock).mockResolvedValue({ payload: {} });
+      mockVerifyJWT.mockResolvedValue({ payload: {} });
       const req = buildRequest("/api/v1/users", {
         method: "GET",
         headers: { origin: "http://attacker.com", host: "localhost" },
@@ -105,29 +105,31 @@ describe("proxy", () => {
     });
 
     it("should accept a valid bearer token", async () => {
-      (jwtVerify as jest.Mock).mockResolvedValue({ payload: { sub: "u1" } });
+      mockVerifyJWT.mockResolvedValue({ payload: { sub: "u1" } });
       const req = buildRequest("/api/v1/users", {
         headers: { authorization: "Bearer good-token" },
       });
 
       const response = await proxy(req);
 
+      expect(Jwt).toHaveBeenCalledWith({ token: "good-token" });
       expect(response.status).not.toBe(401);
     });
 
     it("should accept a valid cookie token", async () => {
-      (jwtVerify as jest.Mock).mockResolvedValue({ payload: { sub: "u1" } });
+      mockVerifyJWT.mockResolvedValue({ payload: { sub: "u1" } });
       const req = buildRequest("/api/v1/users", {
         cookies: { "auth-token": "good-token" },
       });
 
       const response = await proxy(req);
 
+      expect(Jwt).toHaveBeenCalledWith({ token: "good-token" });
       expect(response.status).not.toBe(401);
     });
 
-    it("should return 401 when jwtVerify throws", async () => {
-      (jwtVerify as jest.Mock).mockRejectedValue(new Error("bad token"));
+    it("should return 401 when verifyJWT returns false", async () => {
+      mockVerifyJWT.mockResolvedValue(false);
       const req = buildRequest("/api/v1/users", {
         cookies: { "auth-token": "bad-token" },
       });

@@ -2,21 +2,15 @@
 // Security events (auth, CSRF, rate-limit) log via console.warn; Vercel and Docker stdout collectors ingest these lines.
 /* eslint-disable no-console */
 import { NextResponse } from "next/server";
-import { jwtVerify } from "jose";
 
 import type { NextRequest } from "next/server";
 import type { RateBucket } from "@/types/api";
 
-import { getJwtSecret } from "@/server/configs/jwt.config";
+import { Jwt } from "@/server/configs/jwt.config";
 
 import { CODES_ERROR } from "@/server/constants/codes.constant";
 import { MESSAGES_ERROR } from "@/server/constants/messages.constant";
-import {
-  COOKIE_NAME,
-  JWT_ALGORITHM,
-  JWT_AUDIENCE,
-  JWT_ISSUER,
-} from "@/server/constants/vars.constant";
+import { COOKIE_NAME } from "@/server/constants/vars.constant";
 
 const protectedRoutes = ["/api/v1/"];
 const publicApiRoutes = ["/api/v1/auth/", "/api/v1/health/"];
@@ -64,18 +58,12 @@ async function isAuthenticated(req: NextRequest, pathname: string): Promise<bool
 
   if (!token) return false;
 
-  try {
-    await jwtVerify(token, getJwtSecret(), {
-      algorithms: [JWT_ALGORITHM],
-      issuer: JWT_ISSUER,
-      audience: JWT_AUDIENCE,
-    });
-    return true;
-  } catch (err) {
-    const reason = err instanceof Error ? err.name : "unknown";
-    console.warn("proxy.auth: token rejected", { path: pathname, reason });
+  const result = await new Jwt({ token }).verifyJWT();
+  if (!result) {
+    console.warn("proxy.auth: token rejected", { path: pathname });
     return false;
   }
+  return true;
 }
 
 function isSameOrigin(req: NextRequest): boolean {

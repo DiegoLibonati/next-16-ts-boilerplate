@@ -7,6 +7,11 @@ export interface Session {
   email: string;
 }
 
+export interface JWTConfig {
+  payload?: Record<string, unknown>;
+  token?: string;
+}
+
 export interface RateBucket {
   count: number;
   resetAt: number;

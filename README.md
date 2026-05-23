@@ -264,7 +264,7 @@ next-16-ts-mongo-boilerplate/
 │   ├── server/                         # Server-only code (never imported by Client Components)
 │   │   ├── configs/                    # Server configuration
 │   │   │   ├── env.config.ts           # Lazy zod-validated env loader with memoization
-│   │   │   ├── jwt.config.ts           # Memoized encoded JWT secret (Edge-safe)
+│   │   │   ├── jwt.config.ts           # `Jwt` class (sign/verify) — memoized HS256 secret, Edge-safe
 │   │   │   ├── logger.config.ts        # Pino singleton (pretty in dev, JSON in prod)
 │   │   │   └── mongo.config.ts         # MongoDB connection with global cache
 │   │   ├── constants/                  # Response codes, messages, and shared values
@@ -419,7 +419,7 @@ The MongoDB connection uses a `global._mongooseCache` object to persist the conn
 Cookie-based JWT authentication implemented in `src/server/services/auth.service.ts` and consumed via `src/server/helpers/get_session.helper.ts`:
 
 - Passwords are hashed with `@node-rs/bcrypt` (maintained, native Rust binding) before being stored — plain text passwords never reach the database.
-- JWT tokens are signed and verified with `jose` using the secret defined in `JWT_SECRET`. Signing sets `iss` (`nextjs-app`) and `aud` (`nextjs-app`); verification enforces `algorithms: ["HS256"]`, `issuer`, and `audience` to prevent algorithm-confusion attacks. The encoded secret is memoized once per process in `src/server/configs/jwt.config.ts`.
+- JWT tokens are signed and verified with `jose` through the `Jwt` class exposed by `src/server/configs/jwt.config.ts` (`new Jwt({ payload }).signJWT()` / `new Jwt({ token }).verifyJWT()`). Signing sets `iss` (`nextjs-app`) and `aud` (`nextjs-app`); verification enforces `algorithms: ["HS256"]`, `issuer`, and `audience` to prevent algorithm-confusion attacks. The encoded secret is memoized once per process and the class is Edge-safe — reused by both the proxy and Node-side services.
 - Tokens are stored in an `auth-token` `HttpOnly` cookie (name centralized in `src/server/constants/vars.constant.ts` as `COOKIE_NAME`), making them inaccessible to JavaScript in the browser and mitigating XSS-driven token exfiltration.
 - The cookie is set with `Secure` in production and `SameSite=Lax`.
 - **CSRF defense:** `src/proxy.ts` rejects any non-`GET`/`HEAD`/`OPTIONS` request to `/api/*` whose `Origin` header does not match the request `Host` (or `x-forwarded-host` when behind nginx). This is the same Origin-check Server Actions perform internally. Same-origin posture only — cross-origin API consumers must use the `Bearer` token path explicitly.
