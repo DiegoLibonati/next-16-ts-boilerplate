@@ -1,4 +1,6 @@
-import pino, { type Logger } from "pino";
+import pino from "pino";
+
+import type { Logger } from "pino";
 
 import { getEnvs } from "@/server/configs/env.config";
 
