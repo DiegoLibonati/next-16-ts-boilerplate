@@ -7,6 +7,8 @@ export const CODES_SUCCESS: CodesSuccess = {
   getProduct: "SUCCESS_GET_PRODUCT",
   login: "SUCCESS_LOGIN",
   logout: "SUCCESS_LOGOUT",
+  healthLive: "SUCCESS_HEALTH_LIVE",
+  healthReady: "SUCCESS_HEALTH_READY",
 };
 
 export const CODES_NOT: CodesNot = {
@@ -19,6 +21,9 @@ export const CODES_NOT: CodesNot = {
 export const CODES_ERROR: CodesError = {
   generic: "ERROR_GENERIC",
   unauthorized: "ERROR_UNAUTHORIZED",
+  forbidden: "ERROR_FORBIDDEN",
+  rateLimit: "ERROR_RATE_LIMIT",
   invalidCredentials: "ERROR_INVALID_CREDENTIALS",
   requiredFields: "ERROR_REQUIRED_FIELDS",
+  validation: "ERROR_VALIDATION",
 };

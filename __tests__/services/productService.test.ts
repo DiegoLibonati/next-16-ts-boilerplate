@@ -1,9 +1,11 @@
+import { http, HttpResponse } from "msw";
+
 import type { IProduct } from "@/types/models";
 import type { ResponseWithData } from "@/types/responses";
 
 import productService from "@/services/productService";
 
-import { mockFetchError, mockFetchSuccess } from "@tests/__mocks__/fetch.mock";
+import { mockMswServer } from "@tests/__mocks__/mswServer.mock";
 import { mockProduct, mockProducts } from "@tests/__mocks__/product.mock";
 
 describe("productService", () => {
@@ -14,7 +16,9 @@ describe("productService", () => {
         message: "Products retrieved",
         data: mockProducts,
       };
-      mockFetchSuccess(mockResponse);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/products", () => HttpResponse.json(mockResponse))
+      );
 
       const result = await productService.getAll();
 
@@ -22,21 +26,31 @@ describe("productService", () => {
     });
 
     it("should send GET to /api/v1/products", async () => {
-      mockFetchSuccess({ code: "SUCCESS", message: "ok", data: [] });
+      const mockRequestSpy = jest.fn();
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/products", ({ request }) => {
+          mockRequestSpy(request.method);
+          return HttpResponse.json({ code: "SUCCESS", message: "ok", data: [] });
+        })
+      );
 
       await productService.getAll();
 
-      expect(global.fetch as jest.Mock).toHaveBeenCalledWith("/api/v1/products");
+      expect(mockRequestSpy).toHaveBeenCalledWith("GET");
     });
 
     it("should throw error with HTTP status when response is not ok", async () => {
-      mockFetchError(500);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/products", () => new HttpResponse(null, { status: 500 }))
+      );
 
       await expect(productService.getAll()).rejects.toThrow("HTTP error! status: 500");
     });
 
     it("should throw an Error instance when response is not ok", async () => {
-      mockFetchError(503);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/products", () => new HttpResponse(null, { status: 503 }))
+      );
 
       await expect(productService.getAll()).rejects.toBeInstanceOf(Error);
     });
@@ -49,7 +63,9 @@ describe("productService", () => {
         message: "Product retrieved",
         data: mockProduct,
       };
-      mockFetchSuccess(mockResponse);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/products/:id", () => HttpResponse.json(mockResponse))
+      );
 
       const result = await productService.getById("product-id-1");
 
@@ -57,15 +73,26 @@ describe("productService", () => {
     });
 
     it("should send GET to /api/v1/products/:id", async () => {
-      mockFetchSuccess({ code: "SUCCESS", message: "ok", data: mockProduct });
+      const mockUrlSpy = jest.fn();
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/products/:id", ({ request, params }) => {
+          mockUrlSpy(request.method, params.id);
+          return HttpResponse.json({ code: "SUCCESS", message: "ok", data: mockProduct });
+        })
+      );
 
       await productService.getById("product-id-1");
 
-      expect(global.fetch as jest.Mock).toHaveBeenCalledWith("/api/v1/products/product-id-1");
+      expect(mockUrlSpy).toHaveBeenCalledWith("GET", "product-id-1");
     });
 
     it("should throw error with HTTP status when product is not found", async () => {
-      mockFetchError(404);
+      mockMswServer.use(
+        http.get(
+          "http://localhost/api/v1/products/:id",
+          () => new HttpResponse(null, { status: 404 })
+        )
+      );
 
       await expect(productService.getById("non-existent")).rejects.toThrow(
         "HTTP error! status: 404"
@@ -73,7 +100,12 @@ describe("productService", () => {
     });
 
     it("should throw an Error instance when response is not ok", async () => {
-      mockFetchError(400);
+      mockMswServer.use(
+        http.get(
+          "http://localhost/api/v1/products/:id",
+          () => new HttpResponse(null, { status: 400 })
+        )
+      );
 
       await expect(productService.getById("bad-id")).rejects.toBeInstanceOf(Error);
     });

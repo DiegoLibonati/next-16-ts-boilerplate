@@ -6,6 +6,7 @@ import type { ErrorPageProps } from "@/types/props";
 
 function ErrorPage({ error, reset }: ErrorPageProps): JSX.Element {
   useEffect(() => {
+    // eslint-disable-next-line no-console -- Client Component: pino is server-only, console is the only option here
     console.error(error);
   }, [error]);
 

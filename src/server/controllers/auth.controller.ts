@@ -6,36 +6,36 @@ import { getEnvs } from "@/server/configs/env.config";
 
 import { AuthService } from "@/server/services/auth.service";
 
-import { getExceptionMessage } from "@/server/helpers/get_exception_message.helper";
+import { loginBodySchema } from "@/server/schemas/auth.schema";
+
+import { UnauthorizedError } from "@/server/errors/unauthorized.error";
+
+import { validateBody } from "@/server/helpers/validate.helper";
+import { withErrorHandler } from "@/server/helpers/with_error_handler.helper";
 
 import { CODES_ERROR, CODES_SUCCESS } from "@/server/constants/codes.constant";
 import { MESSAGES_ERROR, MESSAGES_SUCCESS } from "@/server/constants/messages.constant";
 import { COOKIE_MAX_AGE, COOKIE_NAME } from "@/server/constants/vars.constant";
 
 export const AuthController = {
-  async login(req: NextRequest): Promise<NextResponse> {
-    try {
-      const body = (await req.json()) as { email?: string; password?: string };
-      const { email, password } = body;
-
-      if (!email || !password) {
-        return NextResponse.json(
-          { code: CODES_ERROR.requiredFields, message: MESSAGES_ERROR.requiredFields },
-          { status: 400 }
-        );
-      }
+  login: withErrorHandler(
+    "AuthController.login",
+    async (req: NextRequest): Promise<NextResponse> => {
+      const { email, password } = await validateBody(req, loginBodySchema);
 
       const token = await AuthService.login(email, password);
-
       if (!token) {
-        return NextResponse.json(
-          { code: CODES_ERROR.invalidCredentials, message: MESSAGES_ERROR.invalidCredentials },
-          { status: 401 }
+        throw new UnauthorizedError(
+          CODES_ERROR.invalidCredentials,
+          MESSAGES_ERROR.invalidCredentials
         );
       }
 
       const response = NextResponse.json(
-        { code: CODES_SUCCESS.login, message: MESSAGES_SUCCESS.login },
+        {
+          code: CODES_SUCCESS.login,
+          message: MESSAGES_SUCCESS.login,
+        },
         { status: 200 }
       );
       response.cookies.set(COOKIE_NAME, token, {
@@ -46,16 +46,15 @@ export const AuthController = {
         path: "/",
       });
       return response;
-    } catch (error) {
-      console.error("AuthController.login", error);
-      const { status, ...response } = getExceptionMessage(error);
-      return NextResponse.json(response, { status: status });
     }
-  },
+  ),
 
-  logout(): NextResponse {
+  logout: (): NextResponse => {
     const response = NextResponse.json(
-      { code: CODES_SUCCESS.logout, message: MESSAGES_SUCCESS.logout },
+      {
+        code: CODES_SUCCESS.logout,
+        message: MESSAGES_SUCCESS.logout,
+      },
       { status: 200 }
     );
     response.cookies.delete(COOKIE_NAME);

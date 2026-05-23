@@ -7,3 +7,4 @@ process.env.MONGO_PASS = mockEnvs.MONGO_PASS;
 process.env.MONGO_DB_NAME = mockEnvs.MONGO_DB_NAME;
 process.env.MONGO_AUTH_SOURCE = mockEnvs.MONGO_AUTH_SOURCE;
 process.env.JWT_SECRET = mockEnvs.JWT_SECRET;
+process.env.SEED_DEFAULT_DATA = mockEnvs.SEED_DEFAULT_DATA;

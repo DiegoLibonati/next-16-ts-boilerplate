@@ -6,4 +6,5 @@ export const mockEnvs = {
   MONGO_DB_NAME: "boilerplate_db",
   MONGO_AUTH_SOURCE: "admin",
   JWT_SECRET: "test-secret-key-for-jest",
+  SEED_DEFAULT_DATA: "true",
 };

@@ -15,7 +15,7 @@ const buildRequest = (id: string): NextRequest =>
 
 describe("route", () => {
   describe("GET /api/v1/products/:id", () => {
-    it("should delegate to ProductController.getById with the correct id", async () => {
+    it("should delegate to ProductController.getById with the awaited params object", async () => {
       const mockResponse = new NextResponse(JSON.stringify({ _id: "product-id-1" }), {
         status: 200,
       });
@@ -24,19 +24,19 @@ describe("route", () => {
       const req = buildRequest("product-id-1");
       const response = await GET(req, { params: Promise.resolve({ id: "product-id-1" }) });
 
-      expect(ProductController.getById).toHaveBeenCalledWith(req, "product-id-1");
+      expect(ProductController.getById).toHaveBeenCalledWith(req, { id: "product-id-1" });
       expect(response).toBe(mockResponse);
     });
 
-    it("should extract the id from params and pass it to the controller", async () => {
+    it("should resolve the params promise before passing to the controller", async () => {
       const mockResponse = new NextResponse(null, { status: 200 });
       jest.mocked(ProductController.getById).mockResolvedValue(mockResponse);
 
       const req = buildRequest("abc123");
       await GET(req, { params: Promise.resolve({ id: "abc123" }) });
 
-      const [, calledId] = jest.mocked(ProductController.getById).mock.calls[0]!;
-      expect(calledId).toBe("abc123");
+      const [, calledParams] = jest.mocked(ProductController.getById).mock.calls[0]!;
+      expect(calledParams).toEqual({ id: "abc123" });
     });
 
     it("should return the controller response status", async () => {

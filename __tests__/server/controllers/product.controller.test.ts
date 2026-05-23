@@ -12,6 +12,8 @@ import { ProductService } from "@/server/services/product.service";
 
 import { mockProduct, mockProducts } from "@tests/__mocks__/product.mock";
 
+const validId = "507f1f77bcf86cd799439011";
+
 jest.mock("@/server/services/product.service", () => ({
   ProductService: {
     getAllProducts: jest.fn(),
@@ -49,9 +51,7 @@ describe("product.controller", () => {
 
     describe("when service throws an error", () => {
       beforeEach(() => {
-        jest.spyOn(console, "error").mockImplementation(() => {
-          // Empty fn
-        });
+        jest.spyOn(console, "error").mockImplementation(() => undefined);
       });
 
       it("should return 500 with ERROR_GENERIC code", async () => {
@@ -71,9 +71,9 @@ describe("product.controller", () => {
     describe("when the product exists", () => {
       it("should return 200 with product data", async () => {
         (ProductService.getProductById as jest.Mock).mockResolvedValue(mockProduct);
-        const req = buildGetRequest("/api/v1/products/product-id-1");
+        const req = buildGetRequest(`/api/v1/products/${validId}`);
 
-        const response = await ProductController.getById(req, "product-id-1");
+        const response = await ProductController.getById(req, { id: validId });
         const body: { data: IProduct } = await response.json();
 
         expect(response.status).toBe(200);
@@ -82,20 +82,20 @@ describe("product.controller", () => {
 
       it("should pass the id to ProductService.getProductById", async () => {
         (ProductService.getProductById as jest.Mock).mockResolvedValue(mockProduct);
-        const req = buildGetRequest("/api/v1/products/product-id-1");
+        const req = buildGetRequest(`/api/v1/products/${validId}`);
 
-        await ProductController.getById(req, "product-id-1");
+        await ProductController.getById(req, { id: validId });
 
-        expect(ProductService.getProductById).toHaveBeenCalledWith("product-id-1");
+        expect(ProductService.getProductById).toHaveBeenCalledWith(validId);
       });
     });
 
     describe("when the product is not found", () => {
       it("should return 404 when service returns null", async () => {
         (ProductService.getProductById as jest.Mock).mockResolvedValue(null);
-        const req = buildGetRequest("/api/v1/products/nonexistent-id");
+        const req = buildGetRequest(`/api/v1/products/${validId}`);
 
-        const response = await ProductController.getById(req, "nonexistent-id");
+        const response = await ProductController.getById(req, { id: validId });
         const body: { code: string; message: string } = await response.json();
 
         expect(response.status).toBe(404);
@@ -104,18 +104,29 @@ describe("product.controller", () => {
       });
     });
 
+    describe("when the id is invalid", () => {
+      it("should return 400 when the id is not a valid ObjectId", async () => {
+        const req = buildGetRequest("/api/v1/products/not-an-objectid");
+
+        const response = await ProductController.getById(req, { id: "not-an-objectid" });
+        const body: { code: string } = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(body.code).toBe("ERROR_VALIDATION");
+        expect(ProductService.getProductById).not.toHaveBeenCalled();
+      });
+    });
+
     describe("when service throws an error", () => {
       beforeEach(() => {
-        jest.spyOn(console, "error").mockImplementation(() => {
-          // Empty fn
-        });
+        jest.spyOn(console, "error").mockImplementation(() => undefined);
       });
 
       it("should return 500 with ERROR_GENERIC code on generic error", async () => {
         (ProductService.getProductById as jest.Mock).mockRejectedValue(new Error("unexpected"));
-        const req = buildGetRequest("/api/v1/products/some-id");
+        const req = buildGetRequest(`/api/v1/products/${validId}`);
 
-        const response = await ProductController.getById(req, "some-id");
+        const response = await ProductController.getById(req, { id: validId });
         const body: { code: string } = await response.json();
 
         expect(response.status).toBe(500);

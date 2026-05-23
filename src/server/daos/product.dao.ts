@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 import type { IProduct } from "@/types/models";
-import type { ProductCreatePayload } from "@/types/payloads";
+import type { ProductCreateBody } from "@/types/zod";
 
 import { connectDb } from "@/server/configs/mongo.config";
 
@@ -21,7 +21,7 @@ export const ProductDAO = {
     const doc = await ProductModel.findById(id).exec();
     return doc ? serializeProduct(doc) : null;
   },
-  async create(data: ProductCreatePayload): Promise<IProduct> {
+  async create(data: ProductCreateBody): Promise<IProduct> {
     await connectDb();
     const doc = await ProductModel.create(data);
     return serializeProduct(doc);

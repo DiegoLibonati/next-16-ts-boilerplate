@@ -1,8 +1,10 @@
+import { http, HttpResponse } from "msw";
+
 import type { DefaultResponse } from "@/types/responses";
 
 import authService from "@/services/authService";
 
-import { mockFetchSuccess } from "@tests/__mocks__/fetch.mock";
+import { mockMswServer } from "@tests/__mocks__/mswServer.mock";
 
 const mockLoginSuccess: DefaultResponse = {
   code: "SUCCESS_LOGIN",
@@ -17,7 +19,9 @@ const mockLogoutSuccess: DefaultResponse = {
 describe("authService", () => {
   describe("login", () => {
     it("should return response data on successful login", async () => {
-      mockFetchSuccess(mockLoginSuccess);
+      mockMswServer.use(
+        http.post("http://localhost/api/v1/auth/login", () => HttpResponse.json(mockLoginSuccess))
+      );
 
       const result = await authService.login("alice@example.com", "demo1234");
 
@@ -25,15 +29,22 @@ describe("authService", () => {
     });
 
     it("should send POST to /api/v1/auth/login with credentials", async () => {
-      mockFetchSuccess(mockLoginSuccess);
+      const mockBodySpy = jest.fn();
+      mockMswServer.use(
+        http.post("http://localhost/api/v1/auth/login", async ({ request }) => {
+          const body = await request.json();
+          mockBodySpy(request.method, body, request.headers.get("content-type"));
+          return HttpResponse.json(mockLoginSuccess);
+        })
+      );
 
       await authService.login("alice@example.com", "demo1234");
 
-      expect(global.fetch as jest.Mock).toHaveBeenCalledWith("/api/v1/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "alice@example.com", password: "demo1234" }),
-      });
+      expect(mockBodySpy).toHaveBeenCalledWith(
+        "POST",
+        { email: "alice@example.com", password: "demo1234" },
+        "application/json"
+      );
     });
 
     it("should throw error with message from response when login fails", async () => {
@@ -41,10 +52,12 @@ describe("authService", () => {
         code: "ERROR_INVALID_CREDENTIALS",
         message: "Invalid credentials",
       };
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve(errorResponse),
-      }) as typeof fetch;
+      mockMswServer.use(
+        http.post(
+          "http://localhost/api/v1/auth/login",
+          () => new HttpResponse(JSON.stringify(errorResponse), { status: 401 })
+        )
+      );
 
       await expect(authService.login("bad@example.com", "wrong")).rejects.toThrow(
         "Invalid credentials"
@@ -52,10 +65,15 @@ describe("authService", () => {
     });
 
     it("should throw an Error instance when login fails", async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({ code: "ERROR_GENERIC", message: "Server error" }),
-      }) as typeof fetch;
+      mockMswServer.use(
+        http.post(
+          "http://localhost/api/v1/auth/login",
+          () =>
+            new HttpResponse(JSON.stringify({ code: "ERROR_GENERIC", message: "Server error" }), {
+              status: 500,
+            })
+        )
+      );
 
       await expect(authService.login("a@b.com", "pass")).rejects.toBeInstanceOf(Error);
     });
@@ -63,7 +81,9 @@ describe("authService", () => {
 
   describe("logout", () => {
     it("should return response data on successful logout", async () => {
-      mockFetchSuccess(mockLogoutSuccess);
+      mockMswServer.use(
+        http.post("http://localhost/api/v1/auth/logout", () => HttpResponse.json(mockLogoutSuccess))
+      );
 
       const result = await authService.logout();
 
@@ -71,13 +91,17 @@ describe("authService", () => {
     });
 
     it("should send POST to /api/v1/auth/logout", async () => {
-      mockFetchSuccess(mockLogoutSuccess);
+      const mockRequestSpy = jest.fn();
+      mockMswServer.use(
+        http.post("http://localhost/api/v1/auth/logout", ({ request }) => {
+          mockRequestSpy(request.method);
+          return HttpResponse.json(mockLogoutSuccess);
+        })
+      );
 
       await authService.logout();
 
-      expect(global.fetch as jest.Mock).toHaveBeenCalledWith("/api/v1/auth/logout", {
-        method: "POST",
-      });
+      expect(mockRequestSpy).toHaveBeenCalledWith("POST");
     });
 
     it("should throw error with message from response when logout fails", async () => {
@@ -85,19 +109,26 @@ describe("authService", () => {
         code: "ERROR_GENERIC",
         message: "Logout failed",
       };
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve(errorResponse),
-      }) as typeof fetch;
+      mockMswServer.use(
+        http.post(
+          "http://localhost/api/v1/auth/logout",
+          () => new HttpResponse(JSON.stringify(errorResponse), { status: 500 })
+        )
+      );
 
       await expect(authService.logout()).rejects.toThrow("Logout failed");
     });
 
     it("should throw an Error instance when logout fails", async () => {
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({ code: "ERROR_GENERIC", message: "Server error" }),
-      }) as typeof fetch;
+      mockMswServer.use(
+        http.post(
+          "http://localhost/api/v1/auth/logout",
+          () =>
+            new HttpResponse(JSON.stringify({ code: "ERROR_GENERIC", message: "Server error" }), {
+              status: 500,
+            })
+        )
+      );
 
       await expect(authService.logout()).rejects.toBeInstanceOf(Error);
     });

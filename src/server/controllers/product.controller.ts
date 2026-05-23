@@ -4,14 +4,20 @@ import type { NextRequest } from "next/server";
 
 import { ProductService } from "@/server/services/product.service";
 
-import { getExceptionMessage } from "@/server/helpers/get_exception_message.helper";
+import { productIdParamsSchema } from "@/server/schemas/product.schema";
+
+import { NotFoundError } from "@/server/errors/not_found.error";
+
+import { validateParams } from "@/server/helpers/validate.helper";
+import { withErrorHandler } from "@/server/helpers/with_error_handler.helper";
 
 import { CODES_NOT, CODES_SUCCESS } from "@/server/constants/codes.constant";
 import { MESSAGES_NOT, MESSAGES_SUCCESS } from "@/server/constants/messages.constant";
 
 export const ProductController = {
-  async getAll(_req: NextRequest): Promise<NextResponse> {
-    try {
+  getAll: withErrorHandler(
+    "ProductController.getAll",
+    async (_req: NextRequest): Promise<NextResponse> => {
       const products = await ProductService.getAllProducts();
       return NextResponse.json(
         {
@@ -21,30 +27,25 @@ export const ProductController = {
         },
         { status: 200 }
       );
-    } catch (error) {
-      console.error("productController.getAll", error);
-      const { status, ...response } = getExceptionMessage(error);
-      return NextResponse.json(response, { status: status });
     }
-  },
+  ),
 
-  async getById(_req: NextRequest, id: string): Promise<NextResponse> {
-    try {
+  getById: withErrorHandler(
+    "ProductController.getById",
+    async (_req: NextRequest, rawParams: unknown): Promise<NextResponse> => {
+      const { id } = validateParams(rawParams, productIdParamsSchema);
+
       const product = await ProductService.getProductById(id);
-      if (!product) {
-        return NextResponse.json(
-          { code: CODES_NOT.foundProduct, message: MESSAGES_NOT.foundProduct },
-          { status: 404 }
-        );
-      }
+      if (!product) throw new NotFoundError(CODES_NOT.foundProduct, MESSAGES_NOT.foundProduct);
+
       return NextResponse.json(
-        { code: CODES_SUCCESS.getProduct, message: MESSAGES_SUCCESS.getProduct, data: product },
+        {
+          code: CODES_SUCCESS.getProduct,
+          message: MESSAGES_SUCCESS.getProduct,
+          data: product,
+        },
         { status: 200 }
       );
-    } catch (error) {
-      console.error("productController.getById", error);
-      const { status, ...response } = getExceptionMessage(error);
-      return NextResponse.json(response, { status: status });
     }
-  },
+  ),
 };

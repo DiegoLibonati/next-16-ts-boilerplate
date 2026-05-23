@@ -7,6 +7,8 @@ export const MESSAGES_SUCCESS: MessagesSuccess = {
   getProduct: "Product successfully retrieved.",
   login: "Login successful.",
   logout: "Logout successful.",
+  healthLive: "Service is alive.",
+  healthReady: "Service is ready.",
 };
 
 export const MESSAGES_NOT: MessagesNot = {
@@ -19,6 +21,9 @@ export const MESSAGES_NOT: MessagesNot = {
 export const MESSAGES_ERROR: MessagesError = {
   generic: "Something went wrong.",
   unauthorized: "Unauthorized.",
+  forbidden: "Forbidden.",
+  rateLimit: "Too many requests. Please try again later.",
   invalidCredentials: "Invalid credentials.",
   requiredFields: "Email and password are required.",
+  validation: "Validation failed.",
 };

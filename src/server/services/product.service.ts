@@ -1,4 +1,4 @@
-import type { ProductCreatePayload } from "@/types/payloads";
+import type { ProductCreateBody } from "@/types/zod";
 import type { IProduct } from "@/types/models";
 
 import { ProductDAO } from "@/server/daos/product.dao";
@@ -12,7 +12,7 @@ export const ProductService = {
     return ProductDAO.getById(id);
   },
 
-  async createProduct(data: ProductCreatePayload): Promise<IProduct> {
+  async createProduct(data: ProductCreateBody): Promise<IProduct> {
     return ProductDAO.create(data);
   },
 

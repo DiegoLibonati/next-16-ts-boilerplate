@@ -5,7 +5,7 @@
 import mongoose from "mongoose";
 
 import type { IUser } from "@/types/models";
-import type { UserCreatePayload } from "@/types/payloads";
+import type { UserCreateBody } from "@/types/zod";
 
 import { connectDb } from "@/server/configs/mongo.config";
 
@@ -111,7 +111,7 @@ describe("user.dao", () => {
         name: "Carol",
         email: "carol@example.com",
         password: "hash123",
-      } as unknown as UserCreatePayload);
+      } as unknown as UserCreateBody);
 
       expect(result._id).toBeDefined();
       expect(result.name).toBe("Carol");
@@ -123,7 +123,7 @@ describe("user.dao", () => {
         name: "Carol",
         email: "carol@example.com",
         password: "hash123",
-      } as unknown as UserCreatePayload);
+      } as unknown as UserCreateBody);
 
       const fromDb = await UserModel.findById(result._id);
       expect(fromDb).not.toBeNull();
@@ -135,7 +135,7 @@ describe("user.dao", () => {
         name: "Carol",
         email: "carol@example.com",
         password: "hash123",
-      } as unknown as UserCreatePayload);
+      } as unknown as UserCreateBody);
 
       expect((result as unknown as Record<string, unknown>).password).toBeUndefined();
     });

@@ -70,6 +70,42 @@ describe("env.config", () => {
 
         expect(envs.ENV).toBe("production");
       });
+
+      it("should default LOG_LEVEL to info when not set", async () => {
+        delete process.env.LOG_LEVEL;
+
+        const { getEnvs } = await import("@/server/configs/env.config");
+        const envs: Envs = getEnvs();
+
+        expect(envs.LOG_LEVEL).toBe("info");
+      });
+
+      it("should default MONGO_AUTH_SOURCE to admin when not set", async () => {
+        delete process.env.MONGO_AUTH_SOURCE;
+
+        const { getEnvs } = await import("@/server/configs/env.config");
+        const envs: Envs = getEnvs();
+
+        expect(envs.DATABASE_URL).toContain("authSource=admin");
+      });
+
+      it("should default SEED_DEFAULT_DATA to false when not set", async () => {
+        delete process.env.SEED_DEFAULT_DATA;
+
+        const { getEnvs } = await import("@/server/configs/env.config");
+        const envs: Envs = getEnvs();
+
+        expect(envs.SEED_DEFAULT_DATA).toBe(false);
+      });
+
+      it("should coerce SEED_DEFAULT_DATA to true when set to 'true'", async () => {
+        process.env.SEED_DEFAULT_DATA = "true";
+
+        const { getEnvs } = await import("@/server/configs/env.config");
+        const envs: Envs = getEnvs();
+
+        expect(envs.SEED_DEFAULT_DATA).toBe(true);
+      });
     });
 
     describe("memoization", () => {
@@ -88,7 +124,7 @@ describe("env.config", () => {
 
         const { getEnvs } = await import("@/server/configs/env.config");
 
-        expect(() => getEnvs()).toThrow("Missing required environment variable: MONGO_HOST");
+        expect(() => getEnvs()).toThrow(/MONGO_HOST/);
       });
 
       it("should throw when MONGO_PORT is missing", async () => {
@@ -96,7 +132,7 @@ describe("env.config", () => {
 
         const { getEnvs } = await import("@/server/configs/env.config");
 
-        expect(() => getEnvs()).toThrow("Missing required environment variable: MONGO_PORT");
+        expect(() => getEnvs()).toThrow(/MONGO_PORT/);
       });
 
       it("should throw when MONGO_USER is missing", async () => {
@@ -104,7 +140,7 @@ describe("env.config", () => {
 
         const { getEnvs } = await import("@/server/configs/env.config");
 
-        expect(() => getEnvs()).toThrow("Missing required environment variable: MONGO_USER");
+        expect(() => getEnvs()).toThrow(/MONGO_USER/);
       });
 
       it("should throw when JWT_SECRET is missing", async () => {
@@ -112,7 +148,15 @@ describe("env.config", () => {
 
         const { getEnvs } = await import("@/server/configs/env.config");
 
-        expect(() => getEnvs()).toThrow("Missing required environment variable: JWT_SECRET");
+        expect(() => getEnvs()).toThrow(/JWT_SECRET/);
+      });
+
+      it("should throw with Invalid environment variables prefix", async () => {
+        delete process.env.JWT_SECRET;
+
+        const { getEnvs } = await import("@/server/configs/env.config");
+
+        expect(() => getEnvs()).toThrow("Invalid environment variables");
       });
     });
   });

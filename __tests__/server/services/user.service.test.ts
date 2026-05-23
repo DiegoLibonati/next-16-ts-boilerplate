@@ -3,7 +3,7 @@
  */
 
 import type { IUser } from "@/types/models";
-import type { UserCreatePayload } from "@/types/payloads";
+import type { UserCreateBody } from "@/types/zod";
 
 import { UserDAO } from "@/server/daos/user.dao";
 
@@ -11,7 +11,7 @@ import { UserService } from "@/server/services/user.service";
 
 import { mockUser, mockUsers } from "@tests/__mocks__/user.mock";
 
-const mockCreatePayload: UserCreatePayload = {
+const mockCreatePayload: UserCreateBody = {
   name: "Carol New",
   email: "carol@example.com",
 };

@@ -1,5 +1,5 @@
 import type { IUser } from "@/types/models";
-import type { UserCreatePayload } from "@/types/payloads";
+import type { UserCreateBody } from "@/types/zod";
 
 import { UserDAO } from "@/server/daos/user.dao";
 
@@ -12,7 +12,7 @@ export const UserService = {
     return UserDAO.getById(id);
   },
 
-  async createUser(data: UserCreatePayload): Promise<IUser> {
+  async createUser(data: UserCreateBody): Promise<IUser> {
     return UserDAO.create(data);
   },
 

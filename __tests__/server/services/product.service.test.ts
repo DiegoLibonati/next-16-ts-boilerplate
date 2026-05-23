@@ -3,7 +3,7 @@
  */
 
 import type { IProduct } from "@/types/models";
-import type { ProductCreatePayload } from "@/types/payloads";
+import type { ProductCreateBody } from "@/types/zod";
 
 import { ProductDAO } from "@/server/daos/product.dao";
 
@@ -11,7 +11,7 @@ import { ProductService } from "@/server/services/product.service";
 
 import { mockProduct, mockProducts } from "@tests/__mocks__/product.mock";
 
-const mockCreatePayload: ProductCreatePayload = {
+const mockCreatePayload: ProductCreateBody = {
   name: "New Widget",
   description: "A brand new widget",
   price: 19.99,

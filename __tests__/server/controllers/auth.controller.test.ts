@@ -15,7 +15,11 @@ jest.mock("@/server/services/auth.service", () => ({
 }));
 
 jest.mock("@/server/configs/env.config", () => ({
-  getEnvs: jest.fn(),
+  getEnvs: jest.fn(() => ({ ENV: "test", LOG_LEVEL: "silent" })),
+}));
+
+jest.mock("@/server/configs/logger.config", () => ({
+  logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
 }));
 
 const buildLoginRequest = (body?: unknown): NextRequest =>
@@ -34,7 +38,7 @@ describe("auth.controller", () => {
     describe("when credentials are valid", () => {
       it("should return 200 with success code", async () => {
         (AuthService.login as jest.Mock).mockResolvedValue("jwt.token.string");
-        const req = buildLoginRequest({ email: "alice@example.com", password: "pass123" });
+        const req = buildLoginRequest({ email: "alice@example.com", password: "pass1234" });
 
         const response = await AuthController.login(req);
         const body = await response.json();
@@ -45,7 +49,7 @@ describe("auth.controller", () => {
 
       it("should set the auth-token cookie on successful login", async () => {
         (AuthService.login as jest.Mock).mockResolvedValue("jwt.token.string");
-        const req = buildLoginRequest({ email: "alice@example.com", password: "pass123" });
+        const req = buildLoginRequest({ email: "alice@example.com", password: "pass1234" });
 
         const response = await AuthController.login(req);
         const setCookie = response.headers.get("set-cookie");
@@ -55,17 +59,17 @@ describe("auth.controller", () => {
 
       it("should pass email and password to AuthService.login", async () => {
         (AuthService.login as jest.Mock).mockResolvedValue("jwt.token.string");
-        const req = buildLoginRequest({ email: "alice@example.com", password: "pass123" });
+        const req = buildLoginRequest({ email: "alice@example.com", password: "pass1234" });
 
         await AuthController.login(req);
 
-        expect(AuthService.login).toHaveBeenCalledWith("alice@example.com", "pass123");
+        expect(AuthService.login).toHaveBeenCalledWith("alice@example.com", "pass1234");
       });
     });
 
     describe("when email or password is missing", () => {
       it("should return 400 when email is missing", async () => {
-        const req = buildLoginRequest({ password: "pass123" });
+        const req = buildLoginRequest({ password: "pass1234" });
 
         const response = await AuthController.login(req);
 
@@ -94,7 +98,7 @@ describe("auth.controller", () => {
     describe("when credentials are invalid", () => {
       it("should return 401 when AuthService returns null", async () => {
         (AuthService.login as jest.Mock).mockResolvedValue(null);
-        const req = buildLoginRequest({ email: "alice@example.com", password: "wrong" });
+        const req = buildLoginRequest({ email: "alice@example.com", password: "wrongpass1" });
 
         const response = await AuthController.login(req);
         const body = await response.json();
@@ -113,7 +117,7 @@ describe("auth.controller", () => {
 
       it("should return 500 with generic error code", async () => {
         (AuthService.login as jest.Mock).mockRejectedValue(new Error("DB error"));
-        const req = buildLoginRequest({ email: "alice@example.com", password: "pass123" });
+        const req = buildLoginRequest({ email: "alice@example.com", password: "pass1234" });
 
         const response = await AuthController.login(req);
         const body = await response.json();

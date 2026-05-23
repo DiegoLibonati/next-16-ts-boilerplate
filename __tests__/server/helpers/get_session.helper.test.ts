@@ -7,11 +7,12 @@ import { cookies } from "next/headers";
 
 import type { Session } from "@/types/api";
 
-import { getEnvs } from "@/server/configs/env.config";
+import { getJwtSecret } from "@/server/configs/jwt.config";
 
 import { getSession } from "@/server/helpers/get_session.helper";
 
 const mockGet = jest.fn();
+const mockSecret = new Uint8Array([1, 2, 3, 4]);
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(),
@@ -21,14 +22,14 @@ jest.mock("jose", () => ({
   jwtVerify: jest.fn(),
 }));
 
-jest.mock("@/server/configs/env.config", () => ({
-  getEnvs: jest.fn(),
+jest.mock("@/server/configs/jwt.config", () => ({
+  getJwtSecret: jest.fn(),
 }));
 
 describe("get_session.helper", () => {
   describe("getSession", () => {
     beforeEach((): void => {
-      (getEnvs as jest.Mock).mockReturnValue({ JWT_SECRET: "test-secret" });
+      (getJwtSecret as jest.Mock).mockReturnValue(mockSecret);
       (cookies as jest.Mock).mockResolvedValue({ get: mockGet });
     });
 
@@ -44,7 +45,7 @@ describe("get_session.helper", () => {
         expect(result).toEqual({ sub: "user-123", email: "alice@example.com" });
       });
 
-      it("should verify the token using JWT_SECRET from getEnvs", async () => {
+      it("should verify the token using the secret from getJwtSecret", async () => {
         mockGet.mockReturnValue({ value: "valid.jwt.token" });
         (jwtVerify as jest.Mock).mockResolvedValue({
           payload: { sub: "user-123", email: "alice@example.com" },
@@ -52,7 +53,11 @@ describe("get_session.helper", () => {
 
         await getSession();
 
-        expect(jwtVerify).toHaveBeenCalledWith("valid.jwt.token", expect.any(Uint8Array));
+        expect(jwtVerify).toHaveBeenCalledWith("valid.jwt.token", mockSecret, {
+          algorithms: ["HS256"],
+          issuer: "nextjs-app",
+          audience: "nextjs-app",
+        });
       });
 
       it("should look up the cookie by auth-token name", async () => {
@@ -64,6 +69,17 @@ describe("get_session.helper", () => {
         await getSession();
 
         expect(mockGet).toHaveBeenCalledWith("auth-token");
+      });
+
+      it("should stringify sub and email from the payload", async () => {
+        mockGet.mockReturnValue({ value: "valid.jwt.token" });
+        (jwtVerify as jest.Mock).mockResolvedValue({
+          payload: { sub: 42, email: "x@y.com" },
+        });
+
+        const result: Session | null = await getSession();
+
+        expect(result).toEqual({ sub: "42", email: "x@y.com" });
       });
     });
 

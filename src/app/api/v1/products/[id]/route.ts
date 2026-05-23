@@ -8,6 +8,5 @@ export async function GET(
     params: Promise<{ id: string }>;
   }
 ): Promise<Response> {
-  const { id } = await ctx.params;
-  return ProductController.getById(req, id);
+  return ProductController.getById(req, await ctx.params);
 }

@@ -2,11 +2,11 @@
  * @jest-environment node
  */
 
-import bcryptjs from "bcryptjs";
+import { compare } from "@node-rs/bcrypt";
 import { SignJWT } from "jose";
 
 import { connectDb } from "@/server/configs/mongo.config";
-import { getEnvs } from "@/server/configs/env.config";
+import { getJwtSecret } from "@/server/configs/jwt.config";
 
 import { UserModel } from "@/server/models/user.model";
 
@@ -18,15 +18,15 @@ jest.mock("@/server/configs/mongo.config", () => ({
   connectDb: jest.fn(),
 }));
 
-jest.mock("@/server/configs/env.config", () => ({
-  getEnvs: jest.fn(),
+jest.mock("@/server/configs/jwt.config", () => ({
+  getJwtSecret: jest.fn(),
 }));
 
 jest.mock("@/server/models/user.model", () => ({
   UserModel: { findOne: jest.fn() },
 }));
 
-jest.mock("bcryptjs", () => ({
+jest.mock("@node-rs/bcrypt", () => ({
   compare: jest.fn(),
   hash: jest.fn(),
 }));
@@ -39,8 +39,8 @@ describe("auth.service", () => {
   describe("AuthService.login", () => {
     beforeEach((): void => {
       (connectDb as jest.Mock).mockResolvedValue(undefined);
-      (getEnvs as jest.Mock).mockReturnValue({ JWT_SECRET: "test-secret" });
-      (bcryptjs.compare as jest.Mock).mockResolvedValue(true);
+      (getJwtSecret as jest.Mock).mockReturnValue(new Uint8Array([1, 2, 3]));
+      (compare as jest.Mock).mockResolvedValue(true);
       (UserModel.findOne as jest.Mock).mockReturnValue({
         select: jest.fn().mockReturnValue({
           exec: jest.fn().mockResolvedValue(mockUserDoc),
@@ -49,6 +49,8 @@ describe("auth.service", () => {
       (SignJWT as jest.Mock).mockImplementation(() => ({
         setProtectedHeader: jest.fn().mockReturnThis(),
         setIssuedAt: jest.fn().mockReturnThis(),
+        setIssuer: jest.fn().mockReturnThis(),
+        setAudience: jest.fn().mockReturnThis(),
         setExpirationTime: jest.fn().mockReturnThis(),
         sign: jest.fn().mockResolvedValue("mock.jwt.token"),
       }));
@@ -61,10 +63,10 @@ describe("auth.service", () => {
         expect(result).toBe("mock.jwt.token");
       });
 
-      it("should call bcryptjs.compare with the plain password and hashed password", async () => {
+      it("should call compare with the plain password and hashed password", async () => {
         await AuthService.login("alice@example.com", "pass123");
 
-        expect(bcryptjs.compare).toHaveBeenCalledWith("pass123", "hashed-password");
+        expect(compare).toHaveBeenCalledWith("pass123", "hashed-password");
       });
 
       it("should search by lowercased email", async () => {
@@ -82,6 +84,24 @@ describe("auth.service", () => {
 
         expect(mockSelect).toHaveBeenCalledWith("+password");
       });
+
+      it("should sign the JWT using the secret from getJwtSecret", async () => {
+        const mockSecret = new Uint8Array([9, 8, 7]);
+        (getJwtSecret as jest.Mock).mockReturnValue(mockSecret);
+        const mockSign = jest.fn().mockResolvedValue("signed.token");
+        (SignJWT as jest.Mock).mockImplementation(() => ({
+          setProtectedHeader: jest.fn().mockReturnThis(),
+          setIssuedAt: jest.fn().mockReturnThis(),
+          setIssuer: jest.fn().mockReturnThis(),
+          setAudience: jest.fn().mockReturnThis(),
+          setExpirationTime: jest.fn().mockReturnThis(),
+          sign: mockSign,
+        }));
+
+        await AuthService.login("alice@example.com", "pass123");
+
+        expect(mockSign).toHaveBeenCalledWith(mockSecret);
+      });
     });
 
     describe("when the user does not exist", () => {
@@ -97,7 +117,7 @@ describe("auth.service", () => {
         expect(result).toBeNull();
       });
 
-      it("should not call bcryptjs.compare when user is not found", async () => {
+      it("should not call compare when user is not found", async () => {
         (UserModel.findOne as jest.Mock).mockReturnValue({
           select: jest.fn().mockReturnValue({
             exec: jest.fn().mockResolvedValue(null),
@@ -106,13 +126,13 @@ describe("auth.service", () => {
 
         await AuthService.login("unknown@example.com", "pass123");
 
-        expect(bcryptjs.compare).not.toHaveBeenCalled();
+        expect(compare).not.toHaveBeenCalled();
       });
     });
 
     describe("when the password is wrong", () => {
-      it("should return null when bcryptjs.compare returns false", async () => {
-        (bcryptjs.compare as jest.Mock).mockResolvedValue(false);
+      it("should return null when compare returns false", async () => {
+        (compare as jest.Mock).mockResolvedValue(false);
 
         const result: string | null = await AuthService.login("alice@example.com", "wrong");
 
@@ -120,7 +140,7 @@ describe("auth.service", () => {
       });
 
       it("should not sign a JWT when password is invalid", async () => {
-        (bcryptjs.compare as jest.Mock).mockResolvedValue(false);
+        (compare as jest.Mock).mockResolvedValue(false);
 
         await AuthService.login("alice@example.com", "wrong");
 

@@ -1,9 +1,11 @@
+import { http, HttpResponse } from "msw";
+
 import type { IUser } from "@/types/models";
 import type { ResponseWithData } from "@/types/responses";
 
 import userService from "@/services/userService";
 
-import { mockFetchError, mockFetchSuccess } from "@tests/__mocks__/fetch.mock";
+import { mockMswServer } from "@tests/__mocks__/mswServer.mock";
 import { mockUser, mockUsers } from "@tests/__mocks__/user.mock";
 
 describe("userService", () => {
@@ -14,7 +16,9 @@ describe("userService", () => {
         message: "Users retrieved",
         data: mockUsers,
       };
-      mockFetchSuccess(mockResponse);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users", () => HttpResponse.json(mockResponse))
+      );
 
       const result = await userService.getAll();
 
@@ -22,21 +26,31 @@ describe("userService", () => {
     });
 
     it("should send GET to /api/v1/users", async () => {
-      mockFetchSuccess({ code: "SUCCESS", message: "ok", data: [] });
+      const mockRequestSpy = jest.fn();
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users", ({ request }) => {
+          mockRequestSpy(request.method);
+          return HttpResponse.json({ code: "SUCCESS", message: "ok", data: [] });
+        })
+      );
 
       await userService.getAll();
 
-      expect(global.fetch as jest.Mock).toHaveBeenCalledWith("/api/v1/users");
+      expect(mockRequestSpy).toHaveBeenCalledWith("GET");
     });
 
     it("should throw error with HTTP status when response is not ok", async () => {
-      mockFetchError(500);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users", () => new HttpResponse(null, { status: 500 }))
+      );
 
       await expect(userService.getAll()).rejects.toThrow("HTTP error! status: 500");
     });
 
     it("should throw an Error instance when response is not ok", async () => {
-      mockFetchError(503);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users", () => new HttpResponse(null, { status: 503 }))
+      );
 
       await expect(userService.getAll()).rejects.toBeInstanceOf(Error);
     });
@@ -49,7 +63,9 @@ describe("userService", () => {
         message: "User retrieved",
         data: mockUser,
       };
-      mockFetchSuccess(mockResponse);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users/:id", () => HttpResponse.json(mockResponse))
+      );
 
       const result = await userService.getById("user-id-1");
 
@@ -57,21 +73,31 @@ describe("userService", () => {
     });
 
     it("should send GET to /api/v1/users/:id", async () => {
-      mockFetchSuccess({ code: "SUCCESS", message: "ok", data: mockUser });
+      const mockUrlSpy = jest.fn();
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users/:id", ({ request, params }) => {
+          mockUrlSpy(request.method, params.id);
+          return HttpResponse.json({ code: "SUCCESS", message: "ok", data: mockUser });
+        })
+      );
 
       await userService.getById("user-id-1");
 
-      expect(global.fetch as jest.Mock).toHaveBeenCalledWith("/api/v1/users/user-id-1");
+      expect(mockUrlSpy).toHaveBeenCalledWith("GET", "user-id-1");
     });
 
     it("should throw error with HTTP status when user is not found", async () => {
-      mockFetchError(404);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users/:id", () => new HttpResponse(null, { status: 404 }))
+      );
 
       await expect(userService.getById("non-existent")).rejects.toThrow("HTTP error! status: 404");
     });
 
     it("should throw an Error instance when response is not ok", async () => {
-      mockFetchError(400);
+      mockMswServer.use(
+        http.get("http://localhost/api/v1/users/:id", () => new HttpResponse(null, { status: 400 }))
+      );
 
       await expect(userService.getById("bad-id")).rejects.toBeInstanceOf(Error);
     });

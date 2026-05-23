@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 import type { IUser } from "@/types/models";
-import type { UserCreatePayload } from "@/types/payloads";
+import type { UserCreateBody } from "@/types/zod";
 
 import { connectDb } from "@/server/configs/mongo.config";
 
@@ -24,7 +24,7 @@ export const UserDAO = {
     return doc ? serializeUser(doc) : null;
   },
 
-  async create(data: UserCreatePayload): Promise<IUser> {
+  async create(data: UserCreateBody): Promise<IUser> {
     await connectDb();
     const doc = await UserModel.create(data);
     return serializeUser(doc);
