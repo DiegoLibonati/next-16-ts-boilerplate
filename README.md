@@ -97,7 +97,9 @@ The main goal is to explore and demonstrate best practices, patterns, and techno
 ### Prerequisites
 
 - [Node.js 22+](https://nodejs.org/) (the `engines` field in `package.json` enforces this)
-- A running MongoDB instance — either a local install, MongoDB Atlas, or the bundled [Dev Docker environment](#dev-docker-environment) under Production
+- A running MongoDB instance — a local install, MongoDB Atlas, or just the database container from the bundled [Dev Docker environment](#dev-docker-environment)
+
+Docker is optional. `.env.example` points `MONGO_HOST` at `localhost`, so `npm run dev` works against any MongoDB you already have. The Compose files override that one value with the `boilerplate-db` service name, so the same `.env` serves both workflows without edits.
 
 ### Steps
 
@@ -121,6 +123,8 @@ The main goal is to explore and demonstrate best practices, patterns, and techno
 
 The application will be available at `http://localhost:3000`.
 
+> Need only a database? `docker compose -f dev.docker-compose.yml up -d boilerplate-db` publishes MongoDB on `localhost:27017` and leaves the app to `npm run dev`.
+>
 > Prefer a fully containerized dev workflow with MongoDB included? See [Dev Docker environment](#dev-docker-environment).
 
 ### Pre-Commit for Development
@@ -181,28 +185,28 @@ The `prepare` script installs Husky on `npm install`. The pre-commit hook runs `
 
 The `.env` file referenced in [Getting Started](#getting-started) is parsed and validated at runtime by `src/server/configs/env.config.ts`. The full set of supported keys is listed below.
 
-| Key                                 | Description                                                                                           |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `MONGO_HOST`                        | MongoDB host. Use `boilerplate-db` when running inside Docker.                                        |
-| `MONGO_PORT`                        | MongoDB port.                                                                                         |
-| `MONGO_USER`                        | MongoDB root username.                                                                                |
-| `MONGO_PASS`                        | MongoDB root password.                                                                                |
-| `MONGO_DB_NAME`                     | Name of the database to connect to.                                                                   |
-| `MONGO_AUTH_SOURCE`                 | Database used for authentication (typically `admin`).                                                 |
-| `JWT_SECRET`                        | Secret used to sign and verify JWT tokens. Use a long random string in production.                    |
-| `LOG_LEVEL`                         | Pino log level: `fatal`/`error`/`warn`/`info`/`debug`/`trace`/`silent`. Default `info`.               |
-| `RATE_LIMIT_WINDOW_MS`              | Window for the in-memory rate limiter (ms). Default `900000` (15 min).                                |
-| `RATE_LIMIT_MAX`                    | Max requests per IP per window on `/api/v1/auth/login`. `0` disables. Default `0`.                    |
-| `BODY_LIMIT`                        | Max accepted request body size (e.g. `100kb`, `1mb`, `1gb`). Default `1gb`.                           |
-| `SEED_DEFAULT_DATA`                 | If `true`, seeds demo users/products on first connection when collections are empty. Default `false`. |
-| `NEXT_PUBLIC_APP_URL`               | Public base URL of the application. Used for client-side fetch calls.                                 |
-| `NEXT_REDIRECT_IF_ROUTE_NOT_EXISTS` | If `true`, redirects to home when a route doesn't exist. If `false`, shows 404 page.                  |
-| `WATCHPACK_POLLING`                 | Set to `true` to enable polling-based file watching. Required on some WSL2 setups.                    |
+| Key                                 | Description                                                                                               |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `MONGO_HOST`                        | MongoDB host. Keep `localhost` for non-Docker runs — the Compose files override it with `boilerplate-db`. |
+| `MONGO_PORT`                        | MongoDB port.                                                                                             |
+| `MONGO_USER`                        | MongoDB root username.                                                                                    |
+| `MONGO_PASS`                        | MongoDB root password.                                                                                    |
+| `MONGO_DB_NAME`                     | Name of the database to connect to.                                                                       |
+| `MONGO_AUTH_SOURCE`                 | Database used for authentication (typically `admin`).                                                     |
+| `JWT_SECRET`                        | Secret used to sign and verify JWT tokens. Use a long random string in production.                        |
+| `LOG_LEVEL`                         | Pino log level: `fatal`/`error`/`warn`/`info`/`debug`/`trace`/`silent`. Default `info`.                   |
+| `RATE_LIMIT_WINDOW_MS`              | Window for the in-memory rate limiter (ms). Default `900000` (15 min).                                    |
+| `RATE_LIMIT_MAX`                    | Max requests per IP per window on `/api/v1/auth/login`. `0` disables. Default `0`.                        |
+| `BODY_LIMIT`                        | Max accepted request body size (e.g. `100kb`, `1mb`, `1gb`). Default `1gb`.                               |
+| `SEED_DEFAULT_DATA`                 | If `true`, seeds demo users/products on first connection when collections are empty. Default `false`.     |
+| `NEXT_PUBLIC_APP_URL`               | Public base URL of the application. Used for client-side fetch calls.                                     |
+| `NEXT_REDIRECT_IF_ROUTE_NOT_EXISTS` | If `true`, redirects to home when a route doesn't exist. If `false`, shows 404 page.                      |
+| `WATCHPACK_POLLING`                 | Polling-based file watching. Set automatically by `dev.docker-compose.yml`; Turbopack ignores it.         |
 
 Reference values for local development:
 
 ```bash
-MONGO_HOST=boilerplate-db
+MONGO_HOST=localhost
 MONGO_PORT=27017
 MONGO_USER=root
 MONGO_PASS=pass
@@ -211,7 +215,6 @@ MONGO_AUTH_SOURCE=admin
 JWT_SECRET=your-secret-key-here
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_REDIRECT_IF_ROUTE_NOT_EXISTS=false
-# WATCHPACK_POLLING=true
 ```
 
 > Never commit `.env` to version control. Use `.env.example` as the reference template. Production-specific values are documented in [Configure `.env` for production](#configure-env-for-production).
@@ -451,7 +454,33 @@ npm run test:watch     # watch mode
 npm run test:coverage  # generate the coverage report
 ```
 
-Tests live under `__tests__/`. Shared mock data and MSW handlers sit under `__tests__/__mocks__/`. The test database lifecycle is managed through `__tests__/jest.globalSetup.ts` and `__tests__/jest.globalTeardown.ts`. `__tests__/jest.setup.ts` loads `@testing-library/jest-dom` matchers, starts the MSW server, and tracks `MessageChannel` instances so React 19's scheduler does not leak open handles on teardown. Cross-runtime polyfills required by MSW + jsdom live in `__tests__/jest.polyfills.ts` and `__tests__/jest.polyfills-undici.ts`.
+### Test database
+
+The suite talks to a real MongoDB on `localhost:27018`. `__tests__/jest.globalSetup.ts` resolves it in three steps:
+
+1. If `SKIP_TEST_DB=true`, it assumes you already provided one and does nothing.
+2. Otherwise it probes the port — anything already listening is reused as is.
+3. Only if the port is closed does it run `docker compose -f test.docker-compose.yml up -d --wait`.
+
+`jest.globalTeardown.ts` only stops a container that step 3 started, so a database you brought up yourself survives the run. That enables the fast local loop:
+
+```bash
+docker compose -f test.docker-compose.yml up -d --wait   # once
+npm test                                                 # repeatedly, no container churn
+docker compose -f test.docker-compose.yml down -v        # when you are done
+```
+
+Docker is not required either way. Point any MongoDB at `localhost:27018` with user `root`, password `pass`, database `boilerplate_db`, then:
+
+```bash
+SKIP_TEST_DB=true npm test
+```
+
+Those credentials are hardcoded in `test.docker-compose.yml` rather than read from `.env`, because they are the contract with `__tests__/__mocks__/envs.mock.ts` and the two must match.
+
+### Layout
+
+Tests live under `__tests__/`. Shared mock data and MSW handlers sit under `__tests__/__mocks__/`. `__tests__/jest.setup.ts` loads `@testing-library/jest-dom` matchers, starts the MSW server, and tracks `MessageChannel` instances so React 19's scheduler does not leak open handles on teardown. Cross-runtime polyfills required by MSW + jsdom live in `__tests__/jest.polyfills.ts` and `__tests__/jest.polyfills-undici.ts`.
 
 ## Security Audit
 
@@ -513,7 +542,7 @@ The repository ships with a **GitHub Actions** pipeline defined in [`.github/wor
 ### Validation jobs (run on every PR and push to `main`)
 
 1. **`lint-and-audit`** — `npm run lint` (ESLint with `typescript-eslint` strictTypeChecked + Next.js core-web-vitals), `npm run format:check` (Prettier), `npm run type-check` (`tsc --noEmit` against `tsconfig.app.json`), and `npm audit --audit-level=high` (advisory; runs with `continue-on-error: true` so a transitive high advisory does not block the rest of the pipeline — review the job log if it warns).
-2. **`test`** — `npm test`. The Mongo container required by integration tests is brought up automatically inside `__tests__/jest.globalSetup.ts` via `docker compose -f test.docker-compose.yml up` and torn down in `jest.globalTeardown.ts`, so no extra service block is needed in the workflow.
+2. **`test`** — `npm test`. Nothing is listening on `localhost:27018` on a fresh runner, so `__tests__/jest.globalSetup.ts` falls through to `docker compose -f test.docker-compose.yml up` and `jest.globalTeardown.ts` tears it back down. No extra service block is needed in the workflow. See [Test database](#test-database) for the full resolution order.
 3. **`build`** — runs `npm run build` (`tsc -p tsconfig.app.json && next build`) against dummy CI env values (`JWT_SECRET`, `MONGO_*`) so the zod-validated env loader and the eager `getEnvs()` call in `logger.config.ts` do not throw. Validates that the standalone bundle compiles end-to-end.
 4. **`docker-build`** — builds `Dockerfile.development`, `Dockerfile.production`, and `Dockerfile.nginx` in a parallel matrix using [`docker/setup-buildx-action`](https://github.com/docker/setup-buildx-action) + [`docker/build-push-action`](https://github.com/docker/build-push-action). `push: false` — this is a smoke test, not a registry publish. `fail-fast: false` so one broken Dockerfile does not mask issues in the others.
 
@@ -575,7 +604,7 @@ docker compose -f dev.docker-compose.yml up --build
 
 The application will be available at `http://localhost:3000`.
 
-> **WSL2 users:** uncomment `WATCHPACK_POLLING=true` in `.env` if hot reload does not pick up file changes.
+> Hot reload inside the container relies on `WATCHPACK_POLLING=true`, which `dev.docker-compose.yml` sets for you — WSL2 and macOS bind mounts do not deliver inotify events reliably. No `.env` edit needed. The same block overrides `MONGO_HOST` with the `boilerplate-db` service name, so the `localhost` value your host uses stays untouched.
 
 ### Prod Docker stack
 
@@ -594,7 +623,6 @@ Only nginx is exposed to the outside world. The app and database containers are 
 Production values differ from the local development reference shown in [Env Keys](#env-keys). At minimum override these:
 
 ```env
-MONGO_HOST=boilerplate-db        # must match the db service name in docker-compose
 MONGO_PORT=27017
 MONGO_USER=root
 MONGO_PASS=<strong-password>
@@ -603,6 +631,8 @@ MONGO_AUTH_SOURCE=admin
 JWT_SECRET=<long-random-secret>
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
 ```
+
+`MONGO_HOST` is deliberately absent: `prod.docker-compose.yml` sets it to the `boilerplate-db` service name, overriding whatever `.env` says.
 
 #### Deploy
 
