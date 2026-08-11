@@ -4,6 +4,8 @@ import { getEnvs } from "@/server/configs/env.config";
 
 import { seedIfEmpty } from "@/server/startup/seed.startup";
 
+import { DB_SERVER_SELECTION_TIMEOUT_MS } from "@/server/constants/vars.constant";
+
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -23,9 +25,16 @@ export async function connectDb(): Promise<typeof mongoose> {
 
   if (cache.conn) return cache.conn;
 
-  cache.promise ??= mongoose.connect(getEnvs().DATABASE_URL);
+  cache.promise ??= mongoose.connect(getEnvs().DATABASE_URL, {
+    serverSelectionTimeoutMS: DB_SERVER_SELECTION_TIMEOUT_MS,
+  });
 
-  cache.conn = await cache.promise;
+  try {
+    cache.conn = await cache.promise;
+  } catch (error) {
+    cache.promise = null;
+    throw error;
+  }
   await seedIfEmpty();
   return cache.conn;
 }
