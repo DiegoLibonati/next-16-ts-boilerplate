@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Next 16 TS Mongo Boilerplate",
-    short_name: "Next16TSMongo",
+    name: "Next.js 16 MongoDB Boilerplate",
+    short_name: "Next16Mongo",
     description:
-      "Next 16 Ts Mongo Boilerplate is a production-ready starting point for building full-stack web applications with Next.js, TypeScript, and MongoDB.",
+      "Next.js 16 MongoDB Boilerplate is a production-ready starting point for building full-stack web applications with Next.js, TypeScript, and MongoDB.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

@@ -1,4 +1,4 @@
-name: next-16-ts-mongo-boilerplate-prod
+name: nextjs-16-mongodb-boilerplate-prod
 
 services:
   boilerplate-nginx:

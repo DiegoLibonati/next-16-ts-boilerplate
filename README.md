@@ -1,4 +1,4 @@
-# Next 16 Ts Mongo Boilerplate
+# Next.js 16 MongoDB Boilerplate
 
 ## Educational Purpose
 
@@ -8,7 +8,7 @@ The main goal is to explore and demonstrate best practices, patterns, and techno
 
 ## Description
 
-**Next 16 Ts Mongo Boilerplate** is a production-ready starting point for building full-stack web applications with Next.js, TypeScript, and MongoDB. It is not a UI kit or a framework — it is the foundation you clone once and stop rebuilding from scratch on every new project.
+**Next.js 16 MongoDB Boilerplate** is a production-ready starting point for building full-stack web applications with Next.js, TypeScript, and MongoDB. It is not a UI kit or a framework — it is the foundation you clone once and stop rebuilding from scratch on every new project.
 
 **The problem it solves:** every Next.js + TypeScript project starts with the same repetitive decisions — how to structure a full-stack codebase, how to separate server logic from client logic, where to put types, how to handle authentication, how to connect to a database safely, and how to deploy the whole thing with Docker and nginx. This boilerplate answers all of those decisions upfront, with a consistent, layered architecture that scales to real applications without introducing unnecessary complexity.
 
@@ -222,7 +222,7 @@ NEXT_REDIRECT_IF_ROUTE_NOT_EXISTS=false
 ## Project Structure
 
 ```
-next-16-ts-mongo-boilerplate/
+nextjs-16-mongodb-boilerplate/
 ├── __tests__/                          # Test suite
 │   ├── __mocks__/                      # Shared mock data and module mocks
 │   ├── jest.globalSetup.ts             # Global setup (runs once before all tests)
@@ -566,9 +566,9 @@ npm test
 npm run build
 
 # docker-build (one image at a time)
-docker build -f Dockerfile.development -t next-16-ts-mongo-boilerplate:dev .
-docker build -f Dockerfile.production  -t next-16-ts-mongo-boilerplate:prod .
-docker build -f Dockerfile.nginx       -t next-16-ts-mongo-boilerplate-nginx:latest .
+docker build -f Dockerfile.development -t nextjs-16-mongodb-boilerplate:dev .
+docker build -f Dockerfile.production  -t nextjs-16-mongodb-boilerplate:prod .
+docker build -f Dockerfile.nginx       -t nextjs-16-mongodb-boilerplate-nginx:latest .
 ```
 
 ### Where the build outputs live
@@ -674,4 +674,4 @@ None at the moment.
 
 ## Portfolio Link
 
-[`https://www.diegolibonati.com.ar/#/project/next-16-ts-mongo-boilerplate`](https://www.diegolibonati.com.ar/#/project/next-16-ts-mongo-boilerplate)
+[`https://www.diegolibonati.com.ar/#/project/nextjs-16-mongodb-boilerplate`](https://www.diegolibonati.com.ar/#/project/nextjs-16-mongodb-boilerplate)

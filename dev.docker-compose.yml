@@ -1,4 +1,4 @@
-name: next-16-ts-mongo-boilerplate-dev
+name: nextjs-16-mongodb-boilerplate-dev
 
 services:
   boilerplate-app:

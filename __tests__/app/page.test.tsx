@@ -35,7 +35,7 @@ describe("page", () => {
     it("should render the app heading", async () => {
       await renderPage();
       expect(
-        screen.getByRole("heading", { name: "Next 16 TS Mongo Boilerplate" })
+        screen.getByRole("heading", { name: "Next.js 16 MongoDB Boilerplate" })
       ).toBeInTheDocument();
     });
 
@@ -81,7 +81,7 @@ describe("page", () => {
     it("should render the app heading", async () => {
       await renderPage();
       expect(
-        screen.getByRole("heading", { name: "Next 16 TS Mongo Boilerplate" })
+        screen.getByRole("heading", { name: "Next.js 16 MongoDB Boilerplate" })
       ).toBeInTheDocument();
     });
 
